@@ -114,7 +114,7 @@ func fetchVpcs(cfg *aws.Config, config *Config, region *AwsRegion) (err error) {
 		return err
 	}
 
-	region.Vpcs = resp
+	region.Vpcs = resp.VPCs
 
 	return nil
 }
@@ -129,7 +129,7 @@ func fetchSubnets(cfg *aws.Config, config *Config, region *AwsRegion) (err error
 		return err
 	}
 
-	region.Subnets = resp
+	region.Subnets = resp.Subnets
 
 	return nil
 }
@@ -155,7 +155,9 @@ func fetchInstances(cfg *aws.Config, runtimeConfig *Config, region *AwsRegion) (
 		return err
 	}
 
-	region.Instances = resp
+	for _, reservation := range resp.Reservations {
+		region.Instances = append(region.Instances, reservation.Instances...)
+	}
 
 	return nil
 }
@@ -170,7 +172,7 @@ func fetchElbs(cfg *aws.Config, config *Config, region *AwsRegion) (err error) {
 		return err
 	}
 
-	region.LoadBalancers = resp
+	region.LoadBalancers = resp.LoadBalancerDescriptions
 
 	return nil
 }
@@ -185,7 +187,7 @@ func fetchSecurityGroups(cfg *aws.Config, config *Config, region *AwsRegion) (er
 		return err
 	}
 
-	region.SecurityGroups = resp
+	region.SecurityGroups = resp.SecurityGroups
 
 	return nil
 }
@@ -200,7 +202,7 @@ func fetchAcls(cfg *aws.Config, config *Config, region *AwsRegion) (err error) {
 		return err
 	}
 
-	region.Acls = resp
+	region.Acls = resp.NetworkACLs
 
 	return nil
 }
@@ -215,7 +217,7 @@ func fetchRoutes(cfg *aws.Config, config *Config, region *AwsRegion) (err error)
 		return err
 	}
 
-	region.Routes = resp
+	region.Routes = resp.RouteTables
 
 	return nil
 }
@@ -230,20 +232,20 @@ func fetchGateways(cfg *aws.Config, config *Config, region *AwsRegion) (err erro
 		return err
 	}
 
-	region.Gateways = resp
+	region.Gateways = resp.InternetGateways
 
 	return nil
 }
 
 type AwsRegion struct {
-	Acls           *ec2.DescribeNetworkACLsOutput
-	Gateways       *ec2.DescribeInternetGatewaysOutput
-	Instances      *ec2.DescribeInstancesOutput
-	LoadBalancers  *elb.DescribeLoadBalancersOutput
-	Routes         *ec2.DescribeRouteTablesOutput
-	SecurityGroups *ec2.DescribeSecurityGroupsOutput
-	Subnets        *ec2.DescribeSubnetsOutput
-	Vpcs           *ec2.DescribeVPCsOutput
+	Acls           []*ec2.NetworkACL
+	Gateways       []*ec2.InternetGateway
+	Instances      []*ec2.Instance
+	LoadBalancers  []*elb.LoadBalancerDescription
+	Routes         []*ec2.RouteTable
+	SecurityGroups []*ec2.SecurityGroup
+	Subnets        []*ec2.Subnet
+	Vpcs           []*ec2.VPC
 }
 
 type MultiError []error
