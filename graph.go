@@ -15,23 +15,23 @@ import "errors"
   (region) -[hosts]-> (vpc)
   (region) <-[hosted_by]- (vpc)
 
-	(region) -[houses]-> (az)
-	(region) <-[housed_by]- (az)
+  (region) -[houses]-> (az)
+  (region) <-[housed_by]- (az)
 
-	(vpc) -[allocates_network]-> (subnet)
-	(vpc) <-[network_allocated_by]- (subnet)
+  (vpc) -[allocates_network]-> (subnet)
+  (vpc) <-[network_allocated_by]- (subnet)
 
-	(az) -[hosts_network]-> (subnet)
-	(az) <-[network_hosted_by]- (subnet)
+  (az) -[hosts_network]-> (subnet)
+  (az) <-[network_hosted_by]- (subnet)
 
-	(subnet) -[ip_allocated_to_instance]-> (instance)
-	(subnet) <-[instance_ip_allocated_from]- (instance)
+  (subnet) -[ip_allocated_to_instance]-> (instance)
+  (subnet) <-[instance_ip_allocated_from]- (instance)
 
-	(subnet) -[homes]-> (elb)
-	(subnet) <-[homed_in]- (elb)
+  (subnet) -[homes]-> (elb)
+  (subnet) <-[homed_in]- (elb)
 
-	(elb) -[proxies]-> (instance)
-	(elb) <-[proxied_by]- (instance)
+  (elb) -[proxies]-> (instance)
+  (elb) <-[proxied_by]- (instance)
 
 	===
 
@@ -56,16 +56,15 @@ type Neighbours []*Edge
 const InitialNeighbourCapacity = 4
 
 type Node struct {
-	Id       Identity
-	Type     Type
-	Value    interface{}
-	vectorId int
+	Id    string
+	Type  Type
+	Value interface{}
 }
 
 // EdgeList contains all the relationships between nodes.
 type EdgeList struct {
 	EdgeCount int
-	Edges     map[Identity]Neighbours
+	Edges     map[string]Neighbours
 }
 
 func (el *EdgeList) Len() int {
@@ -84,13 +83,36 @@ func (el *EdgeList) AddNeighbour(from NodeRef, rel Relationship, to NodeRef) {
 }
 
 // GetNeighbours
-func (el *EdgeList) GetNeighbours(id Identity) (n Neighbours, err error) {
+func (el *EdgeList) GetNeighbours(id string) (n Neighbours, err error) {
 	n, ok := el.Edges[id]
 	if !ok {
 		return nil, NeighboursNotFound
 	}
 
 	return n, nil
+}
+
+type RelationshipFilterFunc func(r *Edge) bool
+
+// this could get expensive on a large graph :O
+func (el *EdgeList) GetNeighboursBy(filters ...RelationshipFilterFunc) (n Neighbours) {
+	for _, neighbours := range el.Edges {
+		for _, neighbour := range neighbours {
+			matches := true
+			for _, fn := range filters {
+				if !fn(neighbour) {
+					matches = false
+					break
+				}
+			}
+
+			if matches {
+				n = append(n, neighbour)
+			}
+		}
+	}
+
+	return n
 }
 
 type NodeFilterFunc func(n NodeRef) bool
@@ -103,25 +125,23 @@ func ByType(t Type) (fn NodeFilterFunc) {
 }
 
 // NodeList contains all of the nodes by Node.Id
-type NodeList map[Identity]NodeRef
+type NodeList map[string]NodeRef
 
 // AddNode
-func (nl NodeList) AddNode(rawId string, t Type, v interface{}) (n *Node) {
-	identity := Identity(rawId)
-
+func (nl NodeList) AddNode(id string, t Type, v interface{}) (n *Node) {
 	n = &Node{
-		Id:    identity,
+		Id:    id,
 		Type:  t,
 		Value: v,
 	}
 
-	nl[identity] = n
+	nl[id] = n
 
 	return n
 }
 
 // GetNode
-func (nl NodeList) GetNode(id Identity) (n NodeRef, err error) {
+func (nl NodeList) GetNode(id string) (n NodeRef, err error) {
 	n, ok := nl[id]
 	if !ok {
 		return nil, NodeNotFound
@@ -179,7 +199,7 @@ func NewGraph() (g *Graph) {
 // NewEdgeList
 func NewEdgeList() (el *EdgeList) {
 	return &EdgeList{
-		Edges: make(map[Identity]Neighbours),
+		Edges: make(map[string]Neighbours),
 	}
 }
 
